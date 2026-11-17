@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -11,16 +12,18 @@ pipeline {
         stage('Deploy') {
             steps {
                 sh '''
-                for SERVER in 172.16.32.13 172.16.32.14
-                do
-                    echo "Deploying to $SERVER"
+                    for SERVER in 172.16.32.13 172.16.32.14
+                    do
+                        echo "Deploying to $SERVER"
 
-                    rsync -av app.py requirements.txt \
-                      deploy@$SERVER:/opt/myapp/
+                        scp -o BatchMode=yes app.py requirements.txt \
+                          deploy@$SERVER:/opt/myapp/ || exit 1
 
-                    ssh deploy@$SERVER \
-                      '/opt/myapp/venv/bin/pip install -r /opt/myapp/requirements.txt && sudo systemctl restart myapp.service'
-                done
+                        ssh -o BatchMode=yes deploy@$SERVER \
+                          'sudo -n /usr/bin/systemctl restart myapp.service' || exit 1
+
+                        echo "Deployment completed: $SERVER"
+                    done
                 '''
             }
         }
